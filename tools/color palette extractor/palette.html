@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toolsuite: Color Palette Extractor</title>
+    <style>
+        /* Keeping your excellent minimalist styling */
+        body { font-family: 'Courier New', Courier, monospace; background-color: #ffffff; color: #000000; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 20px; }
+        header { border-bottom: 5px solid #000; margin-bottom: 30px; }
+        h1 { font-size: 2rem; text-transform: uppercase; margin: 0; padding-bottom: 10px; }
+        input[type="file"] { display: block; font-family: 'Courier New', Courier, monospace; border: 2px solid #000; padding: 10px; width: 100%; box-sizing: border-box; margin: 15px 0; background: #fff; }
+        #status { margin-top: 10px; padding: 10px; border: 1px dashed #000; display: inline-block; font-size: 0.9rem; }
+        
+        /* Fixed Preview Container */
+        #imagePreviewContainer { margin-top: 30px; border: 2px solid #000; display: none; /* Hidden by default */ padding: 10px; background-color: #f9f9f9; max-width: 100%; }
+        #previewImg { max-width: 100%; height: auto; display: block; }
+
+        #paletteDisplay { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 30px; }
+        .color-swatch { border: 2px solid #000; padding: 5px; text-align: center; cursor: pointer; }
+        .color-box { width: 80px; height: 80px; border: 1px solid #000; margin-bottom: 5px; }
+        .color-code { font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+        hr { border: none; border-top: 1px solid #000; margin: 40px 0; }
+        a { color: #000; text-decoration: none; border-bottom: 1px dotted #000; }
+        footer { margin-top: 60px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Color Palette Extractor</h1>
+        <p>Upload an image to instantly extract its dominant color palette. No data leaves your browser.</p>
+    </header>
+
+    <main>
+        <section>
+            <input type="file" id="imgInput" accept="image/*">
+            <p id="status">System Ready: Select an image to start.</p>
+        </section>
+
+        <div id="imagePreviewContainer">
+            <img id="previewImg" alt="Preview">
+        </div>
+
+        <div id="paletteDisplay"></div>
+    </main>
+
+    <footer>
+        <hr>
+        <p><a href="https://project-toolsuite.vercel.app">← Back to Home</a></p>
+    </footer>
+
+    <script src="palette-logic.js"></script>
+</body>
+</html>
