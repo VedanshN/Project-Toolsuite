@@ -2,83 +2,137 @@
 
 let peer = null;
 let localStream = null;
+let currentCall = null;
 
-async function startSharing() {
-    try {
-        // 1. Get the screen stream first
-        localStream = await navigator.mediaDevices.getDisplayMedia({ 
-            video: true,
-            audio: false 
-        });
-        
+async function startSharing(){
+    if (!window.Peer) {
+        alert("PeerJS library not loaded. Please check your internet connection.");
+        return;
+    }
+    try{
+        localStream = await navigator.mediaDevices.getDisplayMedia({
+            video: {cursor: "always"},
+            audio: true,
+        })
+
+        localStream.getVideoTracks()[0].onended = () => stopSharing();
+
         const video = document.getElementById('videoElement');
         video.srcObject = localStream;
+        video.muted = true;
 
         const shortId = Math.floor(1000 + Math.random() * 9000).toString();
-        // Use a clean PeerJS configuration
-        peer = new Peer('toolsuite-' + shortId, {
-            debug: 2
-        });
-
-        peer.on('open', () => {
-            document.getElementById('setup-zone').classList.add('hidden');
-            document.getElementById('display-zone').classList.remove('hidden');
-            document.getElementById('share-id-display').innerHTML = `CODE: <strong style="font-size:2rem;">${shortId}</strong>`;
-            document.getElementById('status-text').innerText = "WAITING FOR MOBILE...";
+        peer = new window.Peer('toolsuite-' + shortId);
+        
+        peer.on('open', (id) => {
+            enterDisplayMode(true);
+            document.getElementById('share-id-display').innerText = shortId;
+            updateStatus("Waiting for connection...");
         });
 
         peer.on('call', (call) => {
-            console.log("Phone is connecting...");
+            console.log("Incoming connection...")
             call.answer(localStream);
+            currentCall = call;
+
+            updateStatus("Device Connected! Streaming...");
             
-            call.on('stream', () => {
-                document.getElementById('status-text').innerText = "CONNECTED & STREAMING";
-            });
+            call.on('close', () => updateStatus("Viewer disconnected. Waiting..."));
+        })
+
+        peer.on('error', (err) => {
+            alert("Connection Error: " + err.type);
+            stopSharing();
         });
 
-    } catch (err) {
-        alert("Screen share failed: " + err.message);
+
+
+    }catch (err) {
+        console.error(err);
+        if (err.name !== 'NotAllowedError') {
+            alert("Failed to start screen share: " + err.message);
+        }
     }
 }
 
-function joinStream() {
+function joinStream(){
     const code = document.getElementById('joinCode').value.trim();
-    if (!code) return;
+    if (code.length !== 4) return alert("Please enter the 4-digit code.");
 
-    peer = new Peer(); // Mobile gets random ID
+    updateStatus("Connecting to Host...");
 
-    peer.on('open', () => {
-        document.getElementById('status-text').innerText = "SHAKING HANDS...";
-        document.getElementById('setup-zone').classList.add('hidden');
-        document.getElementById('display-zone').classList.remove('hidden');
+    peer = new window.Peer();
 
-        // On mobile, we MUST provide a dummy stream or an empty MediaStream
-        // so the laptop has something to "answer" to.
-        const call = peer.call('toolsuite-' + code, new MediaStream());
+    peer.on('open', ()=> {
+        enterDisplayMode(false);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 1; 
+        canvas.height = 1;
+        const dummyStream = canvas.captureStream(1);
+        const call = peer.call('toolsuite-' + code, dummyStream);
+        currentCall = call;
 
         call.on('stream', (remoteStream) => {
-            console.log("Stream received on mobile!");
+            console.log("Stream received!");
             const video = document.getElementById('videoElement');
-            
-            // Critical for Mobile: Set srcObject then explicitly call .play()
             video.srcObject = remoteStream;
+            video.muted = false;
             
-            document.getElementById('status-text').innerText = "LIVE VIEW";
-            
-            // Force play for Safari/Chrome mobile
+            updateStatus("Live Feed");
+
             const playPromise = video.play();
             if (playPromise !== undefined) {
                 playPromise.catch(() => {
-                    // If it fails, show a button to the user to manually play
-                    document.getElementById('status-text').innerHTML = 
-                        '<button onclick="document.getElementById(\'videoElement\').play()">TAP TO VIEW STREAM</button>';
+                    updateStatus("Tap video to start playing");
                 });
             }
         });
-    });
 
-    peer.on('error', (err) => {
-        document.getElementById('status-text').innerText = "ERROR: " + err.type;
-        console.error(err);
-    });
+        call.on('close', () => {
+            alert("Host stopped sharing.");
+            stopSharing();
+        });
+
+        peer.on('error', (err) => {
+            if (err.type === 'peer-unavailable') {
+                alert("Invalid Code or Host is offline.");
+            } else {
+                alert("Error: " + err.type);
+            }
+            stopSharing();
+        });
+    })
+}
+
+function stopSharing(){
+    if(localStream){
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+    if(currentCall){
+        currentCall.close();
+        currentCall = null;
+    }
+
+    if (peer) {
+        peer.destroy();
+        peer = null;
+    }
+
+    document.getElementById('setup-zone').classList.remove('hidden');
+    document.getElementById('display-zone').classList.add('hidden');
+    document.getElementById('videoElement').srcObject = null;
+    document.getElementById('joinCode').value = "";
+}
+
+function enterDisplayMode(isHost) {
+    document.getElementById('setup-zone').classList.add('hidden');
+    document.getElementById('display-zone').classList.remove('hidden');
+    
+    document.getElementById('host-info').style.display = isHost ? 'block' : 'none';
+}
+
+function updateStatus(msg) {
+    document.getElementById('status-text').innerText = msg;
 }
