@@ -240,6 +240,20 @@
     <script>
         // Dark mode functionality
         document.addEventListener('DOMContentLoaded', function() {
+            const toolList = document.querySelector('#tools nav ul');
+            
+            if (toolList) {
+                const tools = Array.from(toolList.children);
+                
+                tools.sort((a, b) => {
+                    const textA = a.textContent.trim().toLowerCase();
+                    const textB = b.textContent.trim().toLowerCase();
+                    return textA.localeCompare(textB);
+                });
+
+                tools.forEach(tool => toolList.appendChild(tool));
+            }
+
             const darkModeToggle = document.getElementById('darkModeToggle');
             const body = document.body;
             
