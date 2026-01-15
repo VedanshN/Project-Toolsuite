@@ -1,4 +1,4 @@
-tldr : don't do bad things yo, or else me bans u. complete doc attached below.
+tldr : don't do bad things yo, or else me bans u.
 
 # Contributor Covenant Code of Conduct
 
