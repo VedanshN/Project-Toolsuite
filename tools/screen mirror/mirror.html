@@ -38,6 +38,41 @@
         
         hr { border: none; border-top: 1px solid #000; margin: 30px 0; }
         .code-display { font-size: 2.5rem; letter-spacing: 5px; display: block; margin: 10px 0; }
+
+        .controls-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 10px;
+            border: 2px solid #000;
+            background: #f4f4f4;
+        }
+        
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 120px;
+            height: 4px;
+            background: #000;
+            border: none;
+            padding: 0;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            background: #fff;
+            border: 2px solid #000;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -69,6 +104,16 @@
             
             <div class="video-wrapper">
                 <video id="videoElement" autoplay playsinline></video>
+            </div>
+
+            <div class="controls-bar">
+                <button onclick="togglePip()" title="Picture in Picture">PiP</button>
+                <button onclick="toggleFullscreen()" title="Full Screen">[ ]</button>
+                
+                <div class="volume-control">
+                    <span style="font-weight: bold;">VOL</span>
+                    <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="1" oninput="setVolume(this.value)">
+                </div>
             </div>
 
             <br>

@@ -4,6 +4,9 @@ let peer = null;
 let localStream = null;
 let currentCall = null;
 
+const videoEl = document.getElementById('videoElement');
+const volSlider = document.getElementById('volumeSlider');
+
 async function startSharing(){
     if (!window.Peer) {
         alert("PeerJS library not loaded. Please check your internet connection.");
@@ -17,9 +20,8 @@ async function startSharing(){
 
         localStream.getVideoTracks()[0].onended = () => stopSharing();
 
-        const video = document.getElementById('videoElement');
-        video.srcObject = localStream;
-        video.muted = true;
+        videoEl.muted = true;
+        volSlider.value = 0;
 
         const shortId = Math.floor(1000 + Math.random() * 9000).toString();
         peer = new window.Peer('toolsuite-' + shortId);
@@ -124,6 +126,9 @@ function stopSharing(){
     document.getElementById('display-zone').classList.add('hidden');
     document.getElementById('videoElement').srcObject = null;
     document.getElementById('joinCode').value = "";
+
+    if (document.pictureInPictureElement) document.exitPictureInPicture();
+    if (document.fullscreenElement) document.exitFullscreen();
 }
 
 function enterDisplayMode(isHost) {
@@ -135,4 +140,31 @@ function enterDisplayMode(isHost) {
 
 function updateStatus(msg) {
     document.getElementById('status-text').innerText = msg;
+}
+
+function setVolume(val) {
+    videoEl.volume = val;
+    videoEl.muted = (val === "0");
+}
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        videoEl.requestFullscreen().catch(err => {
+            alert(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+async function togglePip() {
+    try {
+        if (videoEl !== document.pictureInPictureElement) {
+            await videoEl.requestPictureInPicture();
+        } else {
+            await document.exitPictureInPicture();
+        }
+    } catch (error) {
+        alert("Picture-in-Picture failed: " + error.message);
+    }
 }
