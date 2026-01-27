@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toolsuite: Bulk Watermarker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #ffffff;
+            color: #000000;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        header {
+            border-bottom: 5px solid #000;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-transform: uppercase;
+            margin: 0;
+            padding-bottom: 10px;
+        }
+
+        .drop-zone {
+            width: 100%;
+            padding: 40px 20px;
+            border: 2px dashed #000;
+            text-align: center;
+            background: #fff;
+            margin-bottom: 20px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .drop-zone:hover {
+            background-color: #f0f0f0;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            border: 2px solid #000;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #000;
+            font-family: 'Courier New', Courier, monospace;
+            background: #fff;
+        }
+
+        .preview-container {
+            border: 2px solid #000;
+            margin-bottom: 20px;
+            background: #eee;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+            min-height: 200px;
+        }
+
+        #previewCanvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #ffffff;
+            color: #000000;
+            border: 2px solid #000;
+            padding: 12px 24px;
+            text-transform: uppercase;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.1s;
+            flex: 1;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #000;
+            color: #fff;
+        }
+
+        button:disabled {
+            border-color: #ccc;
+            color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #status {
+            padding: 10px;
+            border: 2px solid #000;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        footer {
+            margin-top: 60px;
+            font-size: 0.9rem;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #000;
+            margin: 40px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Bulk Watermarker</h1>
+        <p>Protect your images locally. Batch process with multiple layouts.</p>
+    </header>
+
+    <main>
+        <section>
+            <div class="drop-zone" id="imageDropZone">
+                <span id="imgLabel">Step 1: Click to Upload Images</span>
+                <input type="file" id="imageInput" multiple accept="image/*" style="display:none">
+            </div>
+
+            <div class="drop-zone" id="logoDropZone" style="border-style: solid; padding: 20px;">
+                <span id="logoLabel">Step 2: Upload Logo (Transparent PNG)</span>
+                <input type="file" id="logoInput" accept="image/png" style="display:none">
+            </div>
+
+            <label>Preview & Configuration</label>
+            <div class="preview-container">
+                <canvas id="previewCanvas"></canvas>
+            </div>
+
+            <div class="settings-grid">
+                <div>
+                    <label>Layout Mode</label>
+                    <select id="layoutMode">
+                        <option value="single">Single Stamp</option>
+                        <option value="multi">Bulk Pattern (3 Stamps)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Position (Single)</label>
+                    <select id="position">
+                        <option value="bottom-right">Bottom Right</option>
+                        <option value="bottom-left">Bottom Left</option>
+                        <option value="top-right">Top Right</option>
+                        <option value="top-left">Top Left</option>
+                        <option value="center">Center</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Opacity: <span id="opLabel">0.5</span></label>
+                    <input type="range" id="opacity" min="0.1" max="1" step="0.1" value="0.5">
+                </div>
+                <div>
+                    <label>Logo Size: <span id="sizeLabel">15%</span></label>
+                    <input type="range" id="logoSize" min="5" max="50" step="5" value="15">
+                </div>
+            </div>
+
+            <div id="status"></div>
+
+            <div class="controls">
+                <button id="processBtn" disabled>Process & Download ZIP</button>
+                <button id="clearBtn">Clear All</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <hr>
+        <p><a href="../../index.html" style="color: #000; text-decoration: none; border-bottom: 1px dotted #000;">← Back to Home</a></p>
+    </footer>
+
+    <script src="bulkwatermarkerlogic.js"></script>
+</body>
+</html>
