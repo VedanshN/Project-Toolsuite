@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF STUDIO</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 280px;
+            background: #f5f5f5;
+            border-right: 4px solid #000;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            background: #000;
+            color: #fff;
+            padding: 20px;
+            border-bottom: 4px solid #000;
+        }
+
+        .sidebar-header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .tool-list {
+            list-style: none;
+        }
+
+        .tool-item {
+            padding: 16px 20px;
+            border-bottom: 3px solid #000;
+            cursor: pointer;
+            background: #f5f5f5;
+            color: #000;
+            transition: all 0.1s;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .tool-item:hover {
+            background: #fff;
+            transform: translateX(4px);
+        }
+
+        .tool-item.active {
+            background: #000;
+            color: #fff;
+            box-shadow: inset 4px 0 0 #fff;
+        }
+
+        .tool-item::before {
+            content: '►';
+            margin-right: 10px;
+            opacity: 0;
+        }
+
+        .tool-item.active::before {
+            opacity: 1;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #000;
+            border-bottom: 4px solid #fff;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h2 {
+            font-size: 20px;
+            letter-spacing: 1px;
+        }
+
+        .btn {
+            background: #fff;
+            color: #000;
+            border: 3px solid #000;
+            padding: 10px 20px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.1s;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+
+        .btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0 0 0 #000;
+        }
+
+        .btn-primary {
+            background: #000;
+            color: #fff;
+            border: 3px solid #fff;
+            box-shadow: 4px 4px 0 #fff;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 2px 2px 0 #fff;
+        }
+
+        .btn-danger {
+            background: #ff0000;
+            color: #fff;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* WORKSPACE */
+        .workspace {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            background: #1a1a1a;
+        }
+
+        .preview-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 4px solid #000;
+        }
+
+        .tool-panel {
+            width: 320px;
+            background: #f5f5f5;
+            color: #000;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 4px solid #000;
+        }
+
+        .tool-panel h3 {
+            border-bottom: 3px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input[type="range"],
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 3px solid #000;
+            font-family: 'Courier New', monospace;
+            background: #fff;
+            font-size: 14px;
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: 3px solid #000;
+            cursor: pointer;
+        }
+
+        /* PDF CANVAS */
+        .pdf-canvas-container {
+            background: #fff;
+            border: 4px solid #000;
+            margin-bottom: 20px;
+            position: relative;
+            box-shadow: 8px 8px 0 rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* PAGE THUMBNAILS */
+        .thumbnails-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .thumbnail {
+            border: 4px solid #000;
+            background: #fff;
+            cursor: move;
+            position: relative;
+            box-shadow: 6px 6px 0 rgba(0,0,0,0.4);
+            transition: transform 0.1s;
+        }
+
+        .thumbnail:hover {
+            transform: scale(1.02);
+        }
+
+        .thumbnail.selected {
+            border-color: #00ff00;
+            box-shadow: 6px 6px 0 #00ff00;
+        }
+
+        .thumbnail img,
+        .thumbnail canvas {
+            width: 100%;
+            display: block;
+        }
+
+        .thumbnail-controls {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .thumbnail-btn {
+            width: 28px;
+            height: 28px;
+            border: 3px solid #000;
+            background: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .thumbnail-btn:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .thumbnail-label {
+            background: #000;
+            color: #fff;
+            padding: 6px 8px;
+            font-size: 12px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* FOOTER */
+        .footer {
+            background: #000;
+            border-top: 4px solid #fff;
+            padding: 15px 30px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .footer-info {
+            margin-left: auto;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        /* SIGNATURE PAD */
+        .signature-pad {
+            width: 100%;
+            height: 200px;
+            border: 3px solid #000;
+            background: #fff;
+            cursor: crosshair;
+            display: block;
+        }
+
+        .signature-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        /* WATERMARK PREVIEW */
+        .watermark-preview {
+            width: 100%;
+            height: 150px;
+            border: 3px solid #000;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .watermark-text {
+            font-size: 24px;
+            font-weight: bold;
+            opacity: 0.3;
+            transform: rotate(-45deg);
+            pointer-events: none;
+        }
+
+        /* STATUS MESSAGES */
+        .status-message {
+            padding: 12px;
+            border: 3px solid #000;
+            margin-bottom: 15px;
+            background: #fff;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .status-message.success {
+            background: #4caf50;
+            color: #fff;
+            border-color: #000;
+        }
+
+        .status-message.error {
+            background: #f44336;
+            color: #fff;
+            border-color: #000;
+        }
+
+        /* LOADING */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #fff;
+            font-size: 18px;
+        }
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f5f5f5;
+            border: 2px solid #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #000;
+            border: 2px solid #f5f5f5;
+        }
+
+        /* ANNOTATION OVERLAY */
+        .annotation-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+            z-index: 10;
+        }
+
+        /* SIGNATURE ON PDF */
+        .signature-on-pdf {
+            position: absolute;
+            border: 2px dashed #00ff00;
+            cursor: move;
+            z-index: 20;
+        }
+
+        .signature-on-pdf img {
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .signature-resize-handle {
+            width: 12px;
+            height: 12px;
+            background: #00ff00;
+            border: 2px solid #000;
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            cursor: nwse-resize;
+        }
+
+        .signature-delete {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 24px;
+            height: 24px;
+            background: #ff0000;
+            color: #fff;
+            border: 2px solid #000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* CROP OVERLAY */
+        .crop-overlay {
+            position: absolute;
+            border: 3px solid #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+            cursor: move;
+            z-index: 10;
+        }
+
+        .crop-handle {
+            width: 12px;
+            height: 12px;
+            background: #00ff00;
+            border: 2px solid #000;
+            position: absolute;
+        }
+
+        .crop-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+        .crop-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+        .crop-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+        .crop-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+
+        /* REDACTION BOX */
+        .redaction-box {
+            position: absolute;
+            background: #000;
+            border: 2px solid #fff;
+            cursor: move;
+            z-index: 10;
+        }
+
+        .redaction-delete {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 24px;
+            height: 24px;
+            background: #ff0000;
+            color: #fff;
+            border: 2px solid #000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* SINGLE PAGE VIEW */
+        .single-page-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .page-navigation {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .page-nav-btn {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #fff;
+            background: #000;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .page-info-display {
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 0 20px;
+        }
+
+        /* ZOOM CONTAINER */
+        .zoom-container {
+            overflow: auto;
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .zoomable {
+            transform-origin: top center;
+            transition: transform 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>PDF STUDIO</h1>
+            </div>
+            <ul class="tool-list">
+                <li class="tool-item active" data-tool="viewer">PDF VIEWER</li>
+                <li class="tool-item" data-tool="organizer">PDF ORGANIZER</li>
+                <li class="tool-item" data-tool="merge-split">MERGE & SPLIT</li>
+                <li class="tool-item" data-tool="signer">PDF SIGNER</li>
+                <li class="tool-item" data-tool="annotate">ANNOTATION & MARKUP</li>
+                <li class="tool-item" data-tool="watermark">BULK WATERMARKER</li>
+                <li class="tool-item" data-tool="redaction">REDACTION</li>
+                <li class="tool-item" data-tool="crop">PAGE CROPPER</li>
+                <li class="tool-item" data-tool="extract">PAGE EXTRACTOR</li>
+                <li class="tool-item" data-tool="rotate">PAGE ROTATOR</li>
+            </ul>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <div class="header">
+                <h2 id="tool-title">PDF VIEWER</h2>
+                <div>
+                    <label for="file-input" class="btn">UPLOAD PDF</label>
+                    <input type="file" id="file-input" accept=".pdf,image/*" multiple>
+                </div>
+            </div>
+
+            <div class="workspace">
+                <div class="preview-area" id="preview-area">
+                    <div class="loading">LOAD A PDF TO BEGIN</div>
+                </div>
+
+                <div class="tool-panel" id="tool-panel">
+                    <!-- Dynamic tool controls -->
+                </div>
+            </div>
+
+            <div class="footer" id="footer">
+                <button class="btn btn-primary" id="download-btn" style="display:none;">DOWNLOAD PDF</button>
+                <div class="footer-info">
+                    <span id="page-info"></span>
+                    <span id="file-size" style="margin-left: 20px;"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="studio_pdf.js"></script>
+</body>
+</html>
