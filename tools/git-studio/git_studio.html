@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIT STUDIO</title>
+    <script src="https://unpkg.com/isomorphic-git@1.24.5"></script>
+    <script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>
+    <script src="https://unpkg.com/diff@5.1.0/dist/diff.min.js"></script>
+    
+    <style>
+        /* Base Reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; background: #000; color: #fff; overflow: hidden; }
+
+        /* Layout */
+        .container { display: flex; height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar { width: 280px; background: #f5f5f5; border-right: 4px solid #000; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { background: #000; color: #fff; padding: 20px; border-bottom: 4px solid #000; }
+        .sidebar-header h1 { font-size: 24px; font-weight: bold; letter-spacing: 2px; }
+        .tool-list { list-style: none; overflow-y: auto; flex: 1; }
+        .tool-item { padding: 16px 20px; border-bottom: 3px solid #000; cursor: pointer; background: #f5f5f5; color: #000; font-weight: bold; transition: 0.1s; display: flex; align-items: center; }
+        .tool-item:hover { background: #fff; padding-left: 24px; }
+        .tool-item.active { background: #000; color: #fff; }
+        .tool-item.active::before { content: '►'; margin-right: 10px; }
+
+        /* Main Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: #000; border-bottom: 4px solid #fff; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .btn { background: #fff; color: #000; border: 3px solid #000; padding: 10px 20px; font-family: inherit; font-weight: bold; cursor: pointer; box-shadow: 4px 4px 0 #000; transition: 0.1s; }
+        .btn:active { transform: translate(4px, 4px); box-shadow: none; }
+
+        /* Workspace & Views */
+        .workspace { flex: 1; display: flex; overflow: hidden; background: #1a1a1a; position: relative; }
+        .main-area { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        
+        /* Persistent View Containers */
+        .view-section { width: 100%; height: 100%; display: none; overflow: auto; position: absolute; top: 0; left: 0; background: #1a1a1a; }
+        .view-section.active { display: block; }
+
+        /* Graph View Specifics */
+        #graph-view { overflow: hidden; } /* Canvas needs no scroll */
+        .upload-zone { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 4px dashed #fff; padding: 60px; text-align: center; cursor: pointer; z-index: 10; background: rgba(0,0,0,0.8); }
+        .upload-zone:hover { border-color: #00ff00; background: #000; }
+        canvas { display: block; background: #1a1a1a; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+
+        /* UI Overlays */
+        .controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 20; }
+        .control-btn { width: 40px; height: 40px; border: 3px solid #fff; background: #000; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .control-btn:hover { background: #fff; color: #000; }
+        
+        .legend { position: absolute; bottom: 20px; left: 20px; background: #000; border: 3px solid #fff; padding: 15px; font-size: 12px; z-index: 20; }
+        .legend-item { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+        .legend-color { width: 15px; height: 15px; border: 1px solid #fff; }
+
+        /* Info Panel */
+        .info-panel { width: 350px; background: #f5f5f5; border-left: 4px solid #000; overflow-y: auto; color: #000; display: flex; flex-direction: column; }
+        .panel-header { background: #000; color: #fff; padding: 15px; font-weight: bold; border-bottom: 4px solid #000; }
+        .panel-content { padding: 20px; }
+        .commit-info-item { margin-bottom: 15px; }
+        .commit-info-label { font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #555; }
+        .commit-info-value { border: 2px solid #000; padding: 8px; background: #fff; font-size: 13px; word-break: break-all; }
+
+        /* Lists (Branches, Files, History) */
+        .list-container { padding: 40px; color: #fff; max-width: 1000px; margin: 0 auto; }
+        .list-item { background: #fff; color: #000; padding: 12px; border: 3px solid #000; margin-bottom: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .list-item:hover { background: #000; color: #fff; }
+        .list-item.current { background: #000; color: #fff; border-color: #00ff00; }
+        
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; padding: 40px; }
+        .stat-box { background: #fff; color: #000; border: 4px solid #000; padding: 20px; text-align: center; }
+        .stat-value { font-size: 36px; font-weight: bold; }
+
+        /* Diff View */
+        .diff-view-content { padding: 20px; color: #fff; }
+        .diff-file { border: 2px solid #fff; margin-bottom: 20px; background: #111; }
+        .diff-header { background: #fff; color: #000; padding: 10px; font-weight: bold; }
+        .diff-lines { padding: 10px; font-size: 12px; line-height: 1.4; }
+        .diff-add { color: #00ff00; background: rgba(0, 255, 0, 0.1); display: block; }
+        .diff-remove { color: #ff0000; background: rgba(255, 0, 0, 0.1); display: block; }
+        .diff-context { color: #888; display: block; }
+
+        /* Footer */
+        .footer { background: #000; border-top: 4px solid #fff; padding: 10px 30px; color: #fff; font-size: 12px; }
+        .tooltip { position: absolute; background: #000; color: #fff; border: 2px solid #fff; padding: 5px 10px; font-size: 12px; pointer-events: none; display: none; z-index: 1000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header"><h1>GIT STUDIO</h1></div>
+            <ul class="tool-list">
+                <li class="tool-item active" onclick="app.switchTool('graph')">COMMIT GRAPH</li>
+                <li class="tool-item" onclick="app.switchTool('branches')">BRANCHES</li>
+                <li class="tool-item" onclick="app.switchTool('files')">FILE EXPLORER</li>
+                <li class="tool-item" onclick="app.switchTool('stats')">STATISTICS</li>
+                <li class="tool-item" onclick="app.switchTool('history')">HISTORY</li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h2 id="tool-title">COMMIT GRAPH</h2>
+                <div>
+                    <button class="btn" onclick="document.getElementById('folder-input').click()">LOAD REPO</button>
+                    <input type="file" id="folder-input" webkitdirectory directory multiple style="display: none;">
+                </div>
+            </div>
+
+            <div class="workspace">
+                <div class="main-area">
+                    
+                    <div id="graph-view" class="view-section active">
+                        <div id="upload-zone" class="upload-zone">
+                            <div>DROP PROJECT FOLDER HERE</div>
+                            <div style="font-size:12px; margin-top:10px; color:#aaa;">(Must contain .git)</div>
+                        </div>
+                        <canvas id="commit-graph"></canvas>
+                        
+                        <div id="graph-ui" style="display:none;">
+                            <div class="controls">
+                                <button class="control-btn" onclick="app.zoom(1.1)">+</button>
+                                <button class="control-btn" onclick="app.zoom(0.9)">−</button>
+                                <button class="control-btn" onclick="app.resetView()">⟲</button>
+                            </div>
+                            <div class="legend">
+                                <div class="legend-item"><div class="legend-color" style="background:#00ff00"></div>HEAD</div>
+                                <div class="legend-item"><div class="legend-color" style="background:#0099ff"></div>Branch</div>
+                                <div class="legend-item"><div class="legend-color" style="background:#fff"></div>Commit</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="branches-view" class="view-section">
+                        <div class="list-container">
+                            <h2>BRANCHES</h2>
+                            <div id="branches-list"></div>
+                        </div>
+                    </div>
+
+                    <div id="files-view" class="view-section">
+                        <div class="list-container">
+                            <h2>FILE EXPLORER</h2>
+                            <div id="file-tree-root"></div>
+                        </div>
+                    </div>
+
+                    <div id="stats-view" class="view-section">
+                        <div class="stats-grid" id="stats-grid"></div>
+                    </div>
+
+                    <div id="history-view" class="view-section">
+                        <div class="list-container">
+                            <h2>COMMIT HISTORY</h2>
+                            <div id="history-list"></div>
+                        </div>
+                    </div>
+
+                    <div id="diff-view" class="view-section" style="background:#000; z-index:50;">
+                        <div style="padding:20px; border-bottom:1px solid #fff; display:flex; justify-content:space-between;">
+                            <h2>COMMIT DIFF</h2>
+                            <button class="btn" onclick="app.closeDiff()">CLOSE X</button>
+                        </div>
+                        <div id="diff-content" class="diff-view-content"></div>
+                    </div>
+
+                </div>
+
+                <div class="info-panel" id="info-panel">
+                    <div class="panel-header">INFO</div>
+                    <div class="panel-content" id="info-content">
+                        <p>No repository loaded.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <span id="status-bar">READY</span>
+            </div>
+        </div>
+    </div>
+    
+    <div id="tooltip" class="tooltip"></div>
+    <script src="studio_git.js"></script>
+</body>
+</html>
