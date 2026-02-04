@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Toolsuite</title>
+    <link rel="manifest" href="manifest.json">
     <style>
         :root {
             --bg: #ffffff;
@@ -167,6 +168,7 @@
     <header>
         <h1>Project Toolsuite</h1>
         <p>A collection of fast, minimal, privacy-first tools designed to get work done without friction.</p>
+        <button id="installBtn" class="dark-mode-toggle" style="right: 180px; display: none;">INSTALL APP</button>
         <button class="dark-mode-toggle" id="themeBtn">Dark Mode</button>
     </header>
 
@@ -234,6 +236,8 @@
         { name: "Online Compiler", path: "tools/compiler/compiler.html", tags: ["Dev"] },
         { name: "PDF Studio", path: "tools/pdf-toolkit/pdf_studio.html", tags: ["PDF"] },
         { name: "Git Studio", path: "tools/git-studio/git_studio.html", tags: ["Dev"] },
+        { name: "Vector Studio", path: "tools/vector-studio/vector_studio.html", tags: ["Maths"] },
+        { name: "Archive Studio", path: "tools/archive-studio/archive_studio.html", tags: ["File"] },
     ];
 
     let activeTag = 'all';
@@ -286,6 +290,41 @@
 
     document.getElementById('toolSearch').oninput = render;
     render();
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW Registered!', reg.scope))
+                .catch(err => console.log('SW Failed:', err));
+        });
+    }
+
+    // 2. Custom Install Prompt Logic
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+        // Update UI to notify the user they can add to home screen
+        installBtn.style.display = 'block';
+    });
+
+    installBtn.addEventListener('click', (e) => {
+        // Hide our user interface that shows our A2HS button
+        installBtn.style.display = 'none';
+        // Show the prompt
+        deferredPrompt.prompt();
+        // Wait for the user to respond to the prompt
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the A2HS prompt');
+            }
+            deferredPrompt = null;
+        });
+    });
 </script>
 </body>
 </html>

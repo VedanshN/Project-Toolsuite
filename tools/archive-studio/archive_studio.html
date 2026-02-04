@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio // Archive_Manager</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/libarchive.js@1.3.0/libarchive.js"></script>
+
+    <style>
+        /* --- BRUTALIST THEME SETUP --- */
+        :root {
+            --bg: #050505;
+            --panel: #111;
+            --border: #333;
+            --text-main: #eee;
+            --text-dim: #888;
+            --accent: #00ff00;
+            --danger: #ff3333;
+            --font-mono: 'Courier New', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-mono); }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* LAYOUT */
+        .app-container { display: flex; flex: 1; height: 100%; }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 260px;
+            background-color: var(--panel);
+            border-right: 2px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            z-index: 10;
+        }
+
+        .brand {
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #fff;
+            border-bottom: 2px solid var(--border);
+            letter-spacing: 1px;
+            background: #000;
+        }
+        .brand span { color: var(--accent); }
+
+        .nav-group { flex: 1; display: flex; flex-direction: column; }
+        
+        .nav-item {
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dim);
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-item:hover { background: #1a1a1a; color: #fff; padding-left: 25px; }
+        .nav-item.active { background: var(--bg); color: var(--accent); border-right: 4px solid var(--accent); }
+        
+        .protocol-warning {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid var(--danger);
+            background: rgba(255, 50, 50, 0.1);
+            color: var(--danger);
+            font-size: 0.7rem;
+            display: none; /* JS toggles this */
+        }
+
+        /* MAIN WORKSPACE */
+        .workspace { flex: 1; position: relative; background: var(--bg); display: flex; flex-direction: column; }
+
+        .module { display: none; flex-direction: column; height: 100%; padding: 30px; overflow-y: auto; }
+        .module.active { display: flex; }
+
+        h2 { font-size: 1.5rem; margin-bottom: 20px; color: #fff; text-transform: uppercase; border-bottom: 2px solid var(--accent); display: inline-block; padding-bottom: 5px; }
+
+        /* UPLOAD ZONES */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 4px;
+            padding: 60px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 20px;
+        }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: rgba(0, 255, 0, 0.05); }
+        .upload-icon { font-size: 3rem; margin-bottom: 15px; display: block; }
+        .upload-btn { background: #222; color: #fff; border: 1px solid var(--accent); padding: 10px 20px; cursor: pointer; margin-top: 15px; font-weight: bold; text-transform: uppercase; }
+        .upload-btn:hover { background: var(--accent); color: #000; }
+
+        /* FILE EXPLORER (EXTRACTOR) */
+        .file-explorer { display: none; flex: 1; flex-direction: column; border: 1px solid var(--border); background: #080808; }
+        
+        .breadcrumb-bar {
+            padding: 10px 15px;
+            background: #111;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            font-size: 0.9rem;
+            align-items: center;
+        }
+        .breadcrumb-link { color: var(--accent); cursor: pointer; text-decoration: underline; }
+        .breadcrumb-sep { color: #555; }
+
+        .folder-tree { list-style: none; padding: 10px; overflow-y: auto; flex: 1; }
+        .tree-item {
+            padding: 8px 10px;
+            border-bottom: 1px solid #1a1a1a;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        .tree-item:hover { background: #1a1a1a; }
+        .tree-item.folder { color: #fff; font-weight: bold; }
+        .tree-item.folder::before { content: '📁'; }
+        .tree-item.file { color: var(--text-dim); }
+        .tree-item.file::before { content: '📄'; }
+        .tree-item:hover::before { transform: scale(1.2); }
+
+        /* COMPRESSOR LIST */
+        .file-list { border: 1px solid var(--border); background: #080808; flex: 1; margin-bottom: 20px; overflow-y: auto; padding: 10px; }
+        .list-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #222;
+            align-items: center;
+        }
+        .list-row:hover { background: #111; }
+        .remove-btn { color: var(--danger); border: 1px solid var(--danger); padding: 2px 8px; font-size: 0.7rem; cursor: pointer; background: transparent; }
+        .remove-btn:hover { background: var(--danger); color: #fff; }
+
+        .action-btn {
+            width: 100%;
+            padding: 15px;
+            background: #111;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        .action-btn:hover:not(:disabled) { background: var(--accent); color: #000; }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: #555; color: #555; }
+
+        /* UTILS */
+        .status-msg { margin: 10px 0; padding: 10px; display: none; font-size: 0.8rem; border: 1px solid; }
+        .status-msg.success { border-color: var(--accent); color: var(--accent); background: rgba(0, 255, 0, 0.1); }
+        .status-msg.error { border-color: var(--danger); color: var(--danger); background: rgba(255, 0, 0, 0.1); }
+        
+        .loading-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #333; border-top-color: var(--accent);
+            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="brand">ARCHIVE<span>_STUDIO</span></div>
+            <div class="nav-group">
+                <button class="nav-item active" onclick="app.switchModule('extractor')">
+                    <span>📂</span> EXTRACTOR
+                </button>
+                <button class="nav-item" onclick="app.switchModule('compressor')">
+                    <span>📦</span> COMPRESSOR
+                </button>
+            </div>
+            
+            <div class="protocol-warning" id="protocolWarning">
+                ⚠️ <strong>LOCAL MODE DETECTED</strong><br>
+                .7z/.rar files require a local server (localhost) to work. .zip files work fine.
+            </div>
+        </aside>
+
+        <main class="workspace">
+            
+            <div id="module-extractor" class="module active">
+                <h2>Universal Extractor</h2>
+                
+                <div class="upload-zone" id="extractDropzone">
+                    <span class="upload-icon">📥</span>
+                    <p>DRAG & DROP ARCHIVE HERE</p>
+                    <p style="color: #666; font-size: 0.8rem; margin: 10px 0;">Supports .ZIP (Fast), .7Z, .RAR, .TAR</p>
+                    <button class="upload-btn" onclick="document.getElementById('archiveInput').click()">Select File</button>
+                    <input type="file" id="archiveInput" hidden accept=".zip,.7z,.rar,.tar,.gz" onchange="app.handleArchiveSelect(event)">
+                </div>
+
+                <div class="status-msg" id="extractStatus"></div>
+
+                <div class="file-explorer" id="fileExplorer">
+                    <div class="breadcrumb-bar" id="breadcrumbBar">
+                        <span class="breadcrumb-link" onclick="app.navigate('root')">ROOT</span>
+                    </div>
+                    <ul class="folder-tree" id="folderTree">
+                        </ul>
+                </div>
+            </div>
+
+            <div id="module-compressor" class="module">
+                <h2>Archive Compressor</h2>
+                
+                <div class="upload-zone" id="compressDropzone" style="padding: 40px;">
+                    <span class="upload-icon">➕</span>
+                    <p>ADD FILES TO COMPRESS</p>
+                    <button class="upload-btn" onclick="document.getElementById('compressInput').click()">Add Files</button>
+                    <input type="file" id="compressInput" hidden multiple onchange="app.handleCompressSelect(event)">
+                </div>
+
+                <div class="file-list" id="compressList">
+                    </div>
+                
+                <div class="status-msg" id="compressStatus"></div>
+
+                <button class="action-btn" id="compressBtn" onclick="app.createZip()" disabled>
+                    DOWNLOAD .ZIP PACKAGE
+                </button>
+            </div>
+
+            <div class="loading-overlay" id="loader">
+                <div class="spinner"></div>
+                <div style="color: var(--accent); letter-spacing: 2px;">PROCESSING...</div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="studio_archive.js"></script>
+
+</body>
+</html>
