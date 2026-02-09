@@ -19,16 +19,16 @@ We kickin' corpo butts with this one 🗣️🔥🔥🔥🔥
 
 | Rank | Contributor | Points | Commits |
 |-----:|------------|-------:|--------:|
-| 1 | @Winter262005 | 141 | 141 |
-| 2 | @VITianYash42 | 14 | 14 |
+| 1 | @Winter262005 | 146 | 146 |
+| 2 | @VITianYash42 | 17 | 17 |
 | 3 | @AdityaMittal08 | 9 | 9 |
 | 4 | @SamXop123 | 4 | 4 |
 | 5 | @Pranavkale11 | 3 | 3 |
-| 6 | @nikhil1205-ai | 2 | 2 |
-| 7 | @VedanshN | 2 | 2 |
-| 8 | @androidvitb | 1 | 1 |
-| 9 | @anshul-lh44 | 1 | 1 |
-| 10 | @ShaikhWarsi | 1 | 1 |
+| 6 | @ShaikhWarsi | 3 | 3 |
+| 7 | @nikhil1205-ai | 2 | 2 |
+| 8 | @VedanshN | 2 | 2 |
+| 9 | @androidvitb | 1 | 1 |
+| 10 | @anshul-lh44 | 1 | 1 |
 | 11 | @Shlok-Dwivedi | 1 | 1 |
 | 12 | @SuyashSoni10 | 1 | 1 |
 | 13 | @Vanshikaram | 1 | 1 |
