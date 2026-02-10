@@ -19,8 +19,8 @@ We kickin' corpo butts with this one 🗣️🔥🔥🔥🔥
 
 | Rank | Contributor | Points | Commits |
 |-----:|------------|-------:|--------:|
-| 1 | @Winter262005 | 146 | 146 |
-| 2 | @VITianYash42 | 17 | 17 |
+| 1 | @Winter262005 | 151 | 151 |
+| 2 | @VITianYash42 | 20 | 20 |
 | 3 | @AdityaMittal08 | 9 | 9 |
 | 4 | @SamXop123 | 4 | 4 |
 | 5 | @Pranavkale11 | 3 | 3 |
